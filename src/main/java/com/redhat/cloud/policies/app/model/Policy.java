@@ -40,6 +40,7 @@ import javax.validation.constraints.NotEmpty;
 import javax.validation.constraints.NotNull;
 import org.eclipse.microprofile.openapi.annotations.enums.SchemaType;
 import org.eclipse.microprofile.openapi.annotations.media.Schema;
+import org.hibernate.validator.constraints.Length;
 
 /**
  * @author hrupp
@@ -57,7 +58,8 @@ public class Policy extends PanacheEntityBase {
 
   @NotNull
   @NotEmpty
-  @Schema(description = "Name of the rule. Must be unique per customer account.")
+  @Length(min = 1, max = 150)
+  @Schema(description = "Name of the rule. Must be unique per customer account.", maxLength = 150)
   public String name;
 
   @Schema(description = "A short description of the policy.")

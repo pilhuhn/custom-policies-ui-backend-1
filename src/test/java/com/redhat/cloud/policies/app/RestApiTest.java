@@ -444,6 +444,24 @@ class RestApiTest extends AbstractITest {
   }
 
   @Test
+  void storeNewPolicyNameTooLong() {
+    TestPolicy tp = new TestPolicy();
+    tp.actions = "EMAIL";
+    tp.conditions = "cores = 2";
+    tp.name = "x".repeat(200); // Allowed limit is 150
+
+    given()
+        .header(authHeader)
+        .contentType(ContentType.JSON)
+        .body(tp)
+        .queryParam("alsoStore","false")
+      .when().post(API_BASE_V1_0 + "/policies")
+        .then()
+        .statusCode(400)
+        ;
+  }
+
+  @Test
   void storeNewPolicyEngineProblem() {
     TestPolicy tp = new TestPolicy();
     tp.actions = "EMAIL";
