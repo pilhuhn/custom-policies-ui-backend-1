@@ -16,6 +16,7 @@
  */
 package com.redhat.cloud.policies.app.rest;
 
+import com.redhat.cloud.policies.app.LokiHandler;
 import com.redhat.cloud.policies.app.PolicyEngine;
 import com.redhat.cloud.policies.app.auth.RhIdPrincipal;
 import com.redhat.cloud.policies.app.model.UUIDHelperBean;
@@ -79,6 +80,12 @@ import org.hibernate.exception.ConstraintViolationException;
 @SimplyTimed(absolute = true, name="PolicySvc")
 @RequestScoped
 public class PolicyCrudService {
+
+  @Inject
+  LokiHandler loki;
+
+  public PolicyCrudService() {
+  }
 
   private Logger log = Logger.getLogger(this.getClass().getSimpleName());
 
@@ -217,6 +224,8 @@ public class PolicyCrudService {
                                    schema = @Schema(type = SchemaType.INTEGER)))
   public Response getPoliciesForCustomer() {
 
+    loki.handle("Get polices for customer %s",user.getAccount());
+
     if (!user.canReadAll()) {
       return Response.status(Response.Status.FORBIDDEN).entity(new Msg("Missing permissions to retrieve policies")).build();
     }
@@ -238,6 +247,7 @@ public class PolicyCrudService {
       });
 
     } catch (IllegalArgumentException iae) {
+      loki.handle("Get Policies, acct:[%s], illegal arg : %s ", user.getAccount(), iae.getMessage());
       return Response.status(400,iae.getLocalizedMessage()).build();
     }
 
