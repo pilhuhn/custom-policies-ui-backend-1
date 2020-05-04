@@ -60,6 +60,10 @@ public class LokiHandler {
 
 
   public void handle(String format, Object... args) {
+    handle(Level.INFO, format, args);
+  }
+
+  public void handle(Level level, String format, Object... args) {
 
     String string = String.format(format,args);
 
@@ -77,6 +81,7 @@ public class LokiHandler {
     JsonObject streamObject = Json.createObjectBuilder()
         .add("app","ui-backend")
         .add("account", account)
+        .add("level", level.name())
         .build();
 
     JsonObject stream2Object = Json.createObjectBuilder()
@@ -96,7 +101,20 @@ public class LokiHandler {
     JsonObject jo = job.build();
 
     String body = jo.toString();
-    loki.push(body);
+    try {
+      loki.push(body);
+    } catch (Exception e) {
+      System.err.println("Loki push failed: " + e.getMessage());
+      System.out.println(body);
+    }
+
+  }
+
+  public enum Level {
+    DEBUG,
+    INFO,
+    WARN,
+    ERROR
 
   }
 }

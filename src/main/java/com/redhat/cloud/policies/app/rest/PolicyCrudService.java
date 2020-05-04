@@ -247,7 +247,7 @@ public class PolicyCrudService {
       });
 
     } catch (IllegalArgumentException iae) {
-      loki.handle("Get Policies, acct:[%s], illegal arg : %s ", user.getAccount(), iae.getMessage());
+      loki.handle(LokiHandler.Level.ERROR,"Get Policies, acct:[%s], illegal arg : %s ", user.getAccount(), iae.getMessage());
       return Response.status(400,iae.getLocalizedMessage()).build();
     }
 
