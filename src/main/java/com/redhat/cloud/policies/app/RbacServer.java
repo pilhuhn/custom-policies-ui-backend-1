@@ -32,6 +32,8 @@ import org.eclipse.microprofile.rest.client.inject.RegisterRestClient;
 @Path("/api/rbac/v1")
 @RegisterRestClient(configKey = "rbac")
 @RegisterProvider(RbacRestClientRequestFilter.class)
+@RegisterProvider(value = EngineResponseExceptionMapper.class,
+                  priority = 50)
 public interface RbacServer {
 
   @GET

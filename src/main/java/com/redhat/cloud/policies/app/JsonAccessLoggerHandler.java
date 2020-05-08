@@ -16,6 +16,7 @@
  */
 package com.redhat.cloud.policies.app;
 
+import io.quarkus.logging.loki.LokiLogRecord;
 import io.vertx.core.MultiMap;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.core.http.HttpServerRequest;
@@ -29,6 +30,8 @@ import javax.json.JsonObject;
 import javax.json.JsonObjectBuilder;
 import javax.json.bind.Jsonb;
 import javax.json.bind.JsonbBuilder;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * @author hrupp
@@ -38,6 +41,8 @@ public class JsonAccessLoggerHandler implements LoggerHandler {
   Jsonb jsonb;
   JsonObjectBuilder jsonObjectBuilder;
   private boolean filterHealthCalls;
+
+  Logger logger = Logger.getLogger("__AccessLog");
 
 
   public JsonAccessLoggerHandler(boolean filterHealthCalls) {
@@ -58,7 +63,9 @@ public class JsonAccessLoggerHandler implements LoggerHandler {
       }
     }
 
-    jsonObjectBuilder.add("date", Utils.formatRFC1123DateTime(timestamp));
+    long now = System.currentTimeMillis();
+
+//    jsonObjectBuilder.add("date", Utils.formatRFC1123DateTime(timestamp));
     jsonObjectBuilder.add("method",method.name());
     jsonObjectBuilder.add("uri",uri);
 
@@ -89,7 +96,7 @@ public class JsonAccessLoggerHandler implements LoggerHandler {
     jsonObjectBuilder.add("status",status);
     jsonObjectBuilder.add("content_length",contentLength);
 
-    jsonObjectBuilder.add("duration", System.currentTimeMillis()-timestamp);
+    jsonObjectBuilder.add("duration", now-timestamp);
 
     final MultiMap headers = request.headers();
     String referrer = headers.contains("referrer") ? headers.get("referrer") : headers.get("referer");
@@ -106,7 +113,12 @@ public class JsonAccessLoggerHandler implements LoggerHandler {
 
     JsonObject jsonMessage = jsonObjectBuilder.build();
     String msg = jsonb.toJson(jsonMessage);
-    System.out.println(msg);
+//    System.out.println(msg);
+    LokiLogRecord llr = new LokiLogRecord(Level.INFO, msg);
+    if (acctId != null) {
+      llr.addTag("account", acctId);
+    }
+    logger.log(llr);
   }
 
 

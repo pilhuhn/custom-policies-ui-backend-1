@@ -16,7 +16,6 @@
  */
 package com.redhat.cloud.policies.app.rest;
 
-import com.redhat.cloud.policies.app.LokiHandler;
 import com.redhat.cloud.policies.app.PolicyEngine;
 import com.redhat.cloud.policies.app.auth.RhIdPrincipal;
 import com.redhat.cloud.policies.app.model.UUIDHelperBean;
@@ -28,6 +27,7 @@ import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.enterprise.context.RequestScoped;
 import javax.inject.Inject;
@@ -57,6 +57,8 @@ import javax.ws.rs.core.UriInfo;
 import com.redhat.cloud.policies.app.model.pager.Page;
 import com.redhat.cloud.policies.app.model.pager.Pager;
 import com.redhat.cloud.policies.app.rest.utils.PagingUtils;
+import io.opentracing.Tracer;
+import io.quarkus.logging.loki.LokiLogRecord;
 import org.eclipse.microprofile.metrics.annotation.SimplyTimed;
 import org.eclipse.microprofile.openapi.annotations.Operation;
 import org.eclipse.microprofile.openapi.annotations.enums.ParameterIn;
@@ -80,9 +82,6 @@ import org.hibernate.exception.ConstraintViolationException;
 @SimplyTimed(absolute = true, name="PolicySvc")
 @RequestScoped
 public class PolicyCrudService {
-
-  @Inject
-  LokiHandler loki;
 
   public PolicyCrudService() {
   }
@@ -224,7 +223,13 @@ public class PolicyCrudService {
                                    schema = @Schema(type = SchemaType.INTEGER)))
   public Response getPoliciesForCustomer() {
 
-    loki.handle("Get polices for customer %s",user.getAccount());
+    log.info("Get polices for customer: " +user.getAccount());
+
+    LokiLogRecord llr = new LokiLogRecord(Level.INFO, "Test with LokiLogRecord", "Bla?");
+    llr.addTag("newtag","some value");
+    llr.addTag("account",user.getAccount());
+    log.log(llr);
+
 
     if (!user.canReadAll()) {
       return Response.status(Response.Status.FORBIDDEN).entity(new Msg("Missing permissions to retrieve policies")).build();
@@ -247,7 +252,8 @@ public class PolicyCrudService {
       });
 
     } catch (IllegalArgumentException iae) {
-      loki.handle(LokiHandler.Level.ERROR,"Get Policies, acct:[%s], illegal arg : %s ", user.getAccount(), iae.getMessage());
+      String logMsg = String.format("Get Policies, acct:[%s], illegal arg : %s ", user.getAccount(), iae.getMessage());
+      log.warning(logMsg);
       return Response.status(400,iae.getLocalizedMessage()).build();
     }
 
@@ -387,6 +393,7 @@ public class PolicyCrudService {
       FullTrigger trigger = new FullTrigger(policy,true);
       engine.storeTrigger(trigger, true, user.getAccount());
     } catch (Exception e) {
+      log.warning("Store policy: verification failed: " + getEngineExceptionMsg(e) );
       return Response.status(400,e.getMessage()).entity(getEngineExceptionMsg(e)).build();
     }
 
@@ -409,7 +416,7 @@ public class PolicyCrudService {
         id = policy.store(user.getAccount(), policy);
       } catch (Exception e) {
         Msg engineExceptionMsg = getEngineExceptionMsg(e);
-        log.info("Storing policy in engine failed: " + engineExceptionMsg.msg);
+        log.warning("Storing policy in engine failed: " + engineExceptionMsg.msg);
         return Response.status(400,e.getMessage()).entity(engineExceptionMsg).build();
       }
     } catch (Throwable t) {
@@ -709,6 +716,7 @@ public class PolicyCrudService {
         engine.updateTrigger(policy.id, trigger, true, user.getAccount());
       }
     } catch (Exception e) {
+      log.warning("Validate condition failed: " + getEngineExceptionMsg(e));
       return Response.status(400,e.getMessage()).entity(getEngineExceptionMsg(e)).build();
     }
 

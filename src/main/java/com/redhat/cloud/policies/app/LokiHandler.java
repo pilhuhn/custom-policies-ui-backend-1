@@ -41,6 +41,18 @@ public class LokiHandler {
 
   /*
   {
+    "streams" : [
+    {
+      "stream" : {
+        "level" : "DEBUG"
+      },
+      "values" : [ "1588618894158000000", "JBoss Threads version %s" ]
+    } ]
+  }
+   */
+
+  /*
+  {
     "streams": [
       {
         "stream": {

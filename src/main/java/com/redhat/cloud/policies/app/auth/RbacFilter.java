@@ -21,6 +21,8 @@ import io.opentracing.Scope;
 import io.opentracing.Tracer;
 import io.quarkus.cache.CacheResult;
 import java.io.IOException;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javax.annotation.Priority;
 import javax.inject.Inject;
 import javax.ws.rs.Priorities;
@@ -28,6 +30,8 @@ import javax.ws.rs.container.ContainerRequestContext;
 import javax.ws.rs.container.ContainerRequestFilter;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.ext.Provider;
+
+import io.quarkus.logging.loki.LokiLogRecord;
 import org.eclipse.microprofile.rest.client.inject.RestClient;
 
 /**
@@ -36,6 +40,8 @@ import org.eclipse.microprofile.rest.client.inject.RestClient;
 @Provider
 @Priority(Priorities.HEADER_DECORATOR +1)
 public class RbacFilter implements ContainerRequestFilter {
+
+  private Logger log = Logger.getLogger(this.getClass().getSimpleName());
 
   @Inject
   Tracer tracer;
@@ -52,7 +58,12 @@ public class RbacFilter implements ContainerRequestFilter {
     RbacRaw result;
     try (Scope ignored = tracer.buildSpan("getRBac").startActive(true)){
       result = getRbacInfo(user.getRawRhIdHeader());
-    } catch (Throwable e) {
+    }
+
+    if (result==null) {
+      LokiLogRecord llr = new LokiLogRecord(Level.WARNING,"Got no RBacInfo");
+      llr.addTag("account",user.getAccount());
+      log.log(llr);
       requestContext.abortWith(Response.status(Response.Status.FORBIDDEN).build());
       return;
     }
@@ -70,9 +81,14 @@ public class RbacFilter implements ContainerRequestFilter {
    * quarkus.cache.caffeine.rbac-cache.expire-after-write
    */
   @CacheResult(cacheName = "rbac-cache")
-  RbacRaw getRbacInfo(String xrhidHeader) throws Exception {
+  RbacRaw getRbacInfo(String xrhidHeader)  {
     RbacRaw result;
-    result = rbac.getRbacInfo("policies", xrhidHeader);
+    try {
+      result = rbac.getRbacInfo("policies", xrhidHeader);
+    } catch (Throwable t) {
+
+      return null;
+    }
     return result;
   }
 }

@@ -88,13 +88,22 @@
       <groupId>io.quarkus</groupId>
       <artifactId>quarkus-cache</artifactId>
     </dependency>
+
+<!--
     <dependency>
       <groupId>io.quarkus</groupId>
       <artifactId>quarkus-logging-sentry</artifactId>
     </dependency>
+-->
     <dependency>
         <groupId>io.quarkus</groupId>
         <artifactId>quarkus-kubernetes-config</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>io.quarkus</groupId>
+      <artifactId>quarkus-logging-loki</artifactId>
+      <version>919-SNAPSHOT</version>
     </dependency>
 
     <!-- Test dependencies -->
