@@ -14,11 +14,11 @@
     <java.release>11</java.release>
     <java.source>11</java.source>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <quarkus.version>2.10.0.Final</quarkus.version>
+    <quarkus.version>2.10.1.Final</quarkus.version>
     <surefire-plugin.version>2.22.2</surefire-plugin.version>
     <jacoco.version>0.8.8</jacoco.version>
 
-    <version.testcontainers>1.17.2</version.testcontainers>
+    <version.testcontainers>1.17.3</version.testcontainers>
     <openapi-parser.version>4.0.4</openapi-parser.version>
     <mockserver-netty-no-dependencies.version>5.13.2</mockserver-netty-no-dependencies.version>
     <clowder-quarkus-config-source.version>1.0.2</clowder-quarkus-config-source.version>
@@ -96,6 +96,10 @@
         <groupId>io.quarkus</groupId>
         <artifactId>quarkus-scheduler</artifactId>
     </dependency>
+    <dependency>
+      <groupId>io.quarkus</groupId>
+      <artifactId>quarkus-security</artifactId>
+    </dependency>
 
     <dependency>
         <groupId>io.quarkus</groupId>
@@ -110,13 +114,13 @@
     <dependency>
       <groupId>io.quarkiverse.logging.cloudwatch</groupId>
       <artifactId>quarkus-logging-cloudwatch</artifactId>
-      <version>4.3.1</version>
+      <version>4.5.0</version>
     </dependency>
 
     <dependency>
       <groupId>io.quarkiverse.loggingsentry</groupId>
       <artifactId>quarkus-logging-sentry</artifactId>
-      <version>1.0.1</version>
+      <version>1.2.0</version>
     </dependency>
 
     <!-- Configuration dependencies -->
