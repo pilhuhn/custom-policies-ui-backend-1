@@ -19,6 +19,14 @@ package com.redhat.cloud.policies.app.health;
 import com.redhat.cloud.policies.app.lightweight.LightweightEngine;
 import com.redhat.cloud.policies.app.StuffHolder;
 import com.redhat.cloud.policies.app.model.Policy;
+import io.opentelemetry.api.OpenTelemetry;
+import io.opentelemetry.api.trace.Span;
+import io.opentelemetry.api.trace.SpanKind;
+import io.opentelemetry.api.trace.StatusCode;
+import io.opentelemetry.api.trace.Tracer;
+import io.opentelemetry.context.Context;
+import io.opentelemetry.context.Scope;
+import io.opentelemetry.extension.annotations.WithSpan;
 import io.quarkus.scheduler.Scheduled;
 import org.eclipse.microprofile.metrics.MetricUnits;
 import org.eclipse.microprofile.metrics.annotation.Gauge;
@@ -46,6 +54,9 @@ public class ScheduledStatusProducer {
     @RestClient
     LightweightEngine lightweightEngine;
 
+    @Inject
+    OpenTelemetry otel;
+
     //  // Quarkus only activates this after the first REST-call to any method in this class
     @Gauge(name = "status_isDegraded", unit = MetricUnits.NONE, absolute = true,
             description = "Returns 0 if good, value > 0 for number of entries in the status message")
@@ -53,11 +64,14 @@ public class ScheduledStatusProducer {
         return StuffHolder.getInstance().getStatusInfo().size();
     }
 
+    @WithSpan
     @Scheduled(every = "10s")
     void gather() {
 
         Map<String, String> issues;
         issues = new HashMap<>();
+
+        Tracer tracer = otel.getTracer("scheduled-status");
 
         // Admin has used the endpoint to signal degraded status
         boolean degraded = StuffHolder.getInstance().isDegraded();
@@ -66,16 +80,31 @@ public class ScheduledStatusProducer {
         }
 
         // Now the normal checks
+        Span span = tracer.spanBuilder("check-db")
+            .startSpan();
+
         try {
             Policy.findByNameOrgId(DUMMY, "-dummy-");
         } catch (Exception e) {
             issues.put("backend-db", e.getMessage());
+            span.recordException(e);
+            span.setStatus(StatusCode.ERROR, "Issue talking to the DB");
+        }
+        finally {
+          span.end();
         }
 
-        try {
+
+      span = tracer.spanBuilder("check engine").startSpan();
+        try (Scope scope = span.makeCurrent()){
+            span.addEvent("Call Engine");
             lightweightEngine.validateCondition(DUMMY_CONDITION);
         } catch (Exception e) {
             issues.put("engine", e.getMessage());
+            span.recordException(e);
+            span.setStatus(StatusCode.ERROR, "Can't call engine");
+        } finally {
+          span.end();
         }
 
         StuffHolder.getInstance().setStatusInfo(issues);

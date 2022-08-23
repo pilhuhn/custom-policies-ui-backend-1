@@ -1,6 +1,8 @@
 package com.redhat.cloud.policies.app.auth;
 
 import com.redhat.cloud.policies.app.RbacServer;
+import io.opentelemetry.api.trace.Span;
+import io.opentelemetry.api.trace.StatusCode;
 import io.quarkus.cache.CacheResult;
 import org.eclipse.microprofile.rest.client.inject.RestClient;
 
@@ -28,6 +30,13 @@ public class RbacClient {
      */
     @CacheResult(cacheName = "rbac-cache")
     RbacRaw getRbacInfo(String xrhidHeader) {
+      Span span = Span.current();
+      try {
         return rbac.getRbacInfo("policies", xrhidHeader);
+      } catch (Exception e) {
+        span.setStatus(StatusCode.ERROR);
+        span.recordException(e);
+        throw e;
+      }
     }
 }

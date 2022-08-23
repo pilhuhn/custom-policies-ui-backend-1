@@ -28,7 +28,11 @@ import com.redhat.cloud.policies.app.model.history.PoliciesHistoryRepository;
 import com.redhat.cloud.policies.app.model.pager.Page;
 import com.redhat.cloud.policies.app.model.pager.Pager;
 import com.redhat.cloud.policies.app.rest.utils.PagingUtils;
-import io.opentracing.Tracer;
+import io.opentelemetry.api.trace.Span;
+import io.opentelemetry.api.trace.StatusCode;
+import io.opentelemetry.api.trace.Tracer;
+import io.opentelemetry.context.Scope;
+import io.opentelemetry.extension.annotations.WithSpan;
 import io.quarkus.logging.Log;
 import org.eclipse.microprofile.metrics.annotation.SimplyTimed;
 import org.eclipse.microprofile.openapi.annotations.Operation;
@@ -240,6 +244,7 @@ public class PolicyCrudService {
     @Content(schema = @Schema(implementation = PagedResponseOfPolicy.class)),
             headers = @Header(name = "TotalCount", description = "Total number of items found",
                     schema = @Schema(type = SchemaType.INTEGER)))
+ //   @WithSpan
     public Response getPoliciesForCustomer() {
 
         if (!user.canReadPolicies()) {
@@ -794,6 +799,7 @@ public class PolicyCrudService {
     })
     @GET
     @Path("/{id}/history/trigger")
+    @WithSpan
     public Response getTriggerHistoryForPolicy(@PathParam("id") UUID policyId) {
         if (!user.canReadPolicies()) {
             return Response.status(Response.Status.FORBIDDEN).entity(new Msg("Missing permissions to retrieve the policy history")).build();
@@ -806,15 +812,17 @@ public class PolicyCrudService {
         if (policy == null) {
             builder = Response.status(Response.Status.NOT_FOUND);
         } else {
-
-            try {
+          Span span = tracer.spanBuilder("history-response").startSpan();
+            try (Scope scope = span.makeCurrent()) {
                 Pager pager = PagingUtils.extractPager(uriInfo);
                 builder = buildHistoryResponse(policyId, pager);
             } catch (IllegalArgumentException iae) {
-                tracer.activeSpan().setTag(ERROR_STRING, true);
+                span.recordException(iae);
+                span.setStatus(StatusCode.ERROR);
                 builder = Response.status(400, iae.getMessage());
             } catch (Exception e) {
-                tracer.activeSpan().setTag(ERROR_STRING, true);
+                span.setStatus(StatusCode.ERROR);
+                span.recordException(e);
                 String msg = "Retrieval of history failed with: " + e.getMessage();
                 Log.warn(msg);
                 builder = Response.serverError().entity(msg);

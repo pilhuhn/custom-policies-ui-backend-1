@@ -16,9 +16,6 @@
  */
 package com.redhat.cloud.policies.app.auth;
 
-import io.opentracing.Scope;
-import io.opentracing.Span;
-import io.opentracing.Tracer;
 import java.io.IOException;
 import java.time.Duration;
 
@@ -31,15 +28,13 @@ import javax.ws.rs.container.ContainerRequestFilter;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.ext.Provider;
 
+import io.opentelemetry.extension.annotations.WithSpan;
 import io.quarkus.logging.Log;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 
 @Provider
 @Priority(Priorities.HEADER_DECORATOR + 1)
 public class RbacFilter implements ContainerRequestFilter {
-
-    @Inject
-    Tracer tracer;
 
     @Inject
     RbacClient rbacClient;
@@ -57,6 +52,7 @@ public class RbacFilter implements ContainerRequestFilter {
     Boolean isRbacEnabled;
 
     @Override
+    @WithSpan
     public void filter(ContainerRequestContext requestContext) throws IOException {
         RbacRaw result;
 
@@ -73,8 +69,7 @@ public class RbacFilter implements ContainerRequestFilter {
         }
 
         long t1 = System.currentTimeMillis();
-        Span span = tracer.buildSpan("getRBac").start();
-        try (Scope ignored = tracer.scopeManager().activate(span)) {
+        try {
             result = rbacClient.getRbacInfo(user.getRawRhIdHeader());
         } catch (Throwable e) {
             Log.warn("RBAC call failed", e);
@@ -85,7 +80,6 @@ public class RbacFilter implements ContainerRequestFilter {
             if (warnSlowRbac.get() && (t2 - t1) > warnSlowRbacTolerance.toMillis()) {
                 Log.warnf("Call to RBAC took %d ms for orgId %s", t2 - t1, user.getOrgId());
             }
-            span.finish();
         }
 
         final String policiesPath = "policies";

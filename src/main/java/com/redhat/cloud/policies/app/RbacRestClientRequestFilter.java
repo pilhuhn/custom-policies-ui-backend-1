@@ -40,7 +40,7 @@ public class RbacRestClientRequestFilter implements ClientRequestFilter {
     public void filter(ClientRequestContext requestContext) throws IOException {
         if (authInfo != null) {
             URI uri = requestContext.getUri();
-            if (uri.toString().startsWith("https://ci.cloud.redhat.com")) {
+            if (uri.toString().startsWith("https://console.redhat.com")) {
                 requestContext.getHeaders().putSingle("Authorization", "Basic " + authInfo);
             }
         }
